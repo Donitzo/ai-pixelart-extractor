@@ -1,0 +1,1 @@
+python cli.py --image_path_pattern "./images" --split_distance 10 --create_summary

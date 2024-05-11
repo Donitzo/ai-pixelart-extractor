@@ -1,0 +1,5 @@
+matplotlib
+numba
+PyWavelets
+scikit-learn
+scikit-image
