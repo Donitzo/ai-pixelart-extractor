@@ -7,3 +7,14 @@ The pixel-art extractor works with virtual pixel sizes down to 2 pixels. Any sma
 ## Example usage
 
 `python cli.py --image_path_pattern "./images" --split_distance 10 --create_summary`
+
+## Sample extractions
+
+The following are the three summary plots produced during extraction.
+
+![Grid](https://github.com/Donitzo/ai-pixelart-extractor/blob/main/examples/grid_summary.png)
+
+![Flower](https://github.com/Donitzo/ai-pixelart-extractor/blob/main/examples/spaceship_summary.png)
+
+![Spaceship](https://github.com/Donitzo/ai-pixelart-extractor/blob/main/examples/flower_summary.png)
+
