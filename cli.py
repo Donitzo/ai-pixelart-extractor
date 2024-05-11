@@ -49,6 +49,9 @@ image_paths = glob.glob(args.image_path_pattern)
 if not os.path.exists(args.output_directory):
     os.makedirs(args.output_directory)
 
+if not os.path.exists(args.summary_directory):
+    os.makedirs(args.summary_directory)
+
 for image_path in image_paths:
     print(f'\nExtracting sprite from image "{image_path}"')
 
