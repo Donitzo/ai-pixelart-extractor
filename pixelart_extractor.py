@@ -747,8 +747,8 @@ def extract_sprites(image_rgba:np.array, detect_transparency_color:bool=True, de
             fig.tight_layout()
             fig.canvas.draw()
 
-            summary_rgb = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)\
-                .reshape(fig.canvas.get_width_height()[::-1] + (3,))
+            summary_rgb = np.frombuffer(fig.canvas.tostring_argb(), dtype=np.uint8) \
+                .reshape(fig.canvas.get_width_height()[::-1] + (4,))[:, :, 1:4]
 
             plt.close()
         else:
