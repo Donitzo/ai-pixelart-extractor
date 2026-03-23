@@ -42,6 +42,9 @@ parser.add_argument('--land_dilution_during_cleanup', type=int, default=1)
 parser.add_argument('--island_size_to_remove', type=int, default=5)
 parser.add_argument('--symmetry_coefficient_threshold', type=float, default=0.5)
 parser.add_argument('--create_summary', action='store_true')
+parser.add_argument('--color_quantization_method', default='histogram')
+parser.add_argument('--edge_detection_quantization_method', default='kmeans')
+
 args = parser.parse_args()
 
 image_paths = glob.glob(args.image_path_pattern)
@@ -78,7 +81,9 @@ for image_path in image_paths:
         land_dilution_during_cleanup=args.land_dilution_during_cleanup,
         island_size_to_remove=args.island_size_to_remove,
         symmetry_coefficient_threshold=args.symmetry_coefficient_threshold,
-        create_summary=args.create_summary
+        create_summary=args.create_summary,
+        color_quantization_method=args.color_quantization_method,
+        edge_detection_quantization_method=args.edge_detection_quantization_method
     )
 
     count = 0

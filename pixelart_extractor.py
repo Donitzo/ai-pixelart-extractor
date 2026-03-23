@@ -27,7 +27,7 @@ from sklearn.exceptions import ConvergenceWarning
 from sklearn.neighbors import KDTree
 from types import SimpleNamespace
 
-def create_color_quantizer(image_lab:np.array, transparency_color_lab:np.array,
+def create_color_quantizer_kmeans(image_lab:np.array, transparency_color_lab:np.array,
     same_color_cie76_threshold:float=10.0, max_colors:int=256):
     '''
     Creates a color palette for an image using K-Means clustering in the LAB color space.
@@ -91,6 +91,42 @@ def create_color_quantizer(image_lab:np.array, transparency_color_lab:np.array,
         pixels_lab[~is_opaque] = transparency_color_lab
         return pixels_lab.reshape(image_lab.shape)
 
+    return palette_lab, apply_palette_lab
+
+def create_color_quantizer_histogram(image_lab:np.array, transparency_color_lab:np.array,
+    same_color_cie76_threshold:float=10.0, max_colors:int=256):
+    image_rgb = lab2rgb(image_lab)
+    rgb_flat = (np.clip(image_rgb, 0.0, 1.0) * 255.0).reshape(-1, 3).astype(np.float32)
+    flat_lab = image_lab.reshape(-1, 3)
+    delta_full = deltaE_cie76(flat_lab, transparency_color_lab)
+    is_opaque = delta_full > same_color_cie76_threshold
+    rgb_opaque = rgb_flat[is_opaque]
+
+    if rgb_opaque.shape[0] == 0:
+        palette_lab = np.empty((0, 3), dtype=np.float32)
+    else:
+        unique_rgb = np.unique(rgb_opaque, axis=0)
+        target_colors = max(1, max_colors - 1)
+        if unique_rgb.shape[0] <= target_colors:
+            palette_rgb = unique_rgb / 255.0
+        else:
+            n_clusters = target_colors
+            kmeans = KMeans(n_clusters=n_clusters, random_state=42)
+            with warnings.catch_warnings():
+                warnings.filterwarnings(action='ignore', category=ConvergenceWarning)
+                kmeans.fit(rgb_opaque)
+            palette_rgb = np.clip(kmeans.cluster_centers_ / 255.0, 0.0, 1.0)
+        palette_lab = rgb2lab(palette_rgb.astype(np.float32))
+
+    palette_lab = np.vstack([palette_lab, [transparency_color_lab]])
+    kdtree = KDTree(palette_lab, leaf_size=8)
+
+    def apply_palette_lab(image_lab:np.array):
+        pixels_lab = palette_lab[kdtree.query(image_lab.reshape(-1, 3))[1]]
+        local_opaque = deltaE_cie76(pixels_lab, transparency_color_lab) > same_color_cie76_threshold
+        pixels_lab[~local_opaque] = transparency_color_lab
+        return pixels_lab.reshape(image_lab.shape)
+    
     return palette_lab, apply_palette_lab
 
 def find_common_edge_color(image_lab:np.array, same_color_cie76_threshold:float=10, depth:int|None=None):
@@ -492,7 +528,8 @@ def split_image(image_lab:np.array, transparency_color_lab:np.array, same_color_
 def extract_sprites(image_rgba:np.array, detect_transparency_color:bool=True, default_transparency_color_hex:str='ff00ff',
     split_distance:int|None=None, min_sprite_size:int=8, same_color_cie76_threshold:float=10.0, border_transparency_cie76_threshold:float=20,
     max_colors:int=256, largest_pixel_size:int=64, minimum_peak_fraction:float=0.2, land_dilution_during_cleanup:int=1,
-    island_size_to_remove:int=5, symmetry_coefficient_threshold:float=0.5, create_summary:bool=False):
+    island_size_to_remove:int=5, symmetry_coefficient_threshold:float=0.5, create_summary:bool=False,
+    color_quantization_method:str='histogram', edge_detection_quantization_method:str='kmeans'):
     '''
     Extracts a sprite from an image by applying various image processing techniques.
     The function handles transparency, denoising, color quantization, edge detection,
@@ -551,6 +588,16 @@ def extract_sprites(image_rgba:np.array, detect_transparency_color:bool=True, de
 
             print(f'Transparency color {transparency_color_rgb} found ({fraction * 100:.1f} % of image edges)')
 
+    if color_quantization_method == 'kmeans':
+        create_color_quantizer = create_color_quantizer_kmeans
+    else:
+        create_color_quantizer = create_color_quantizer_histogram
+
+    if edge_detection_quantization_method == 'histogram':
+        create_edge_detection_quantizer = create_color_quantizer_histogram
+    else:
+        create_edge_detection_quantizer = create_color_quantizer_kmeans
+
     # Split into subregions
     if split_distance is None:
         images_lab = [image_lab]
@@ -572,7 +619,7 @@ def extract_sprites(image_rgba:np.array, detect_transparency_color:bool=True, de
         print(f'Cropped image to size {image_lab.shape[1]}x{image_lab.shape[0]}')
 
         # Quantize the full image colors
-        _, quantizer_lab_full = create_color_quantizer(
+        _, quantizer_lab_full = create_edge_detection_quantizer(
             image_lab=image_lab,
             transparency_color_lab=transparency_color_lab,
             same_color_cie76_threshold=same_color_cie76_threshold,
