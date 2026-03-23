@@ -549,6 +549,8 @@ def extract_sprites(image_rgba:np.array, detect_transparency_color:bool=True, de
     :param int island_size_to_remove: The minimum size of objects to remove.
     :param float symmetry_coefficient_threshold: The mean correlation coefficient required for symmetry detection.
     :param bool create_summary: Whether to create a summary image.
+    :param str color_quantization_method: Which method to use for color quantization ("histogram" or "kmeans").
+    :param str edge_detection_quantization_method: Which method to use for edge detection ("histogram" or "kmeans").
     :return: A list of SingleNamespaces with the sprite, whether it was centered and an optional summary image. A None element is returned on failure.
     :rtype: list
     '''
